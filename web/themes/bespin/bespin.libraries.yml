@@ -1,0 +1,18 @@
+global-scripts:
+  version: 1x
+  js:
+    js/bootstrap.min.js: {}
+    js/scripts.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/drupal.ajax
+    - core/drupal
+    - core/drupalSettings
+global-styling:
+  version: 1x
+  css:
+    theme:
+      css/bootstrap.css: {}
+      css/main.css: {}
+      css/responsive_menu.css: {}

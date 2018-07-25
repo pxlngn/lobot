@@ -1,0 +1,23 @@
+name: Bespin
+type: theme
+description: Custom - subtheme based on classy core theme.
+core: 8.x
+base theme: classy
+libraries:
+  - bespin/global-styling
+  - bespin/global-scripts
+regions:
+  header: Header
+  admin_tabs: Admin Tabs
+  hero: Hero
+  preface: Preface
+  content: Main Content
+  postscript: Postscript
+  footer: Footer
+  offcanvas: Offcanvas
+stylesheets-remove:
+  - '@classy/css/components/menu.css'
+  - '@classy/css/components/tabs.css'
+  - '@classy/css/components/form.css'
+  - '@classy/css/components/button.css'
+  - modules/contrib/responsive_menu/css/responsive_menu.css

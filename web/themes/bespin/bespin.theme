@@ -1,0 +1,147 @@
+<?php
+
+
+use Drupal\Component\Utility\Xss;
+use Drupal\Core\Template\Attribute;
+use Drupal\Core\File;
+use Drupal\node\Plugin\Core\Entity\Node;
+
+function bespin_preprocess_html(&$variables) {
+  // Add node id to the body class 2.
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if($node) {
+    $variables['attributes']['class'][] = 'node-' . $node->id();
+  }
+
+  if (!empty($node->field_page_style->value)){
+    $page_style = $node->field_page_style->value;
+    $variables['attributes']['class'][] = $page_style;
+  }
+  /**
+   * Implements classes in select field
+    */
+  if (!empty($node->field_stylesheet->value)){
+    $class = $node->field_stylesheet;
+    foreach ($class as $item) {
+      $variables['attributes']['class'][] = $item->value;
+    };
+  }
+}
+
+/**
+ * Example of using hook_theme_suggestions_HOOK_alter()
+ * @param array $suggestions
+ * @param array $variables
+ * @param $hook
+ */
+
+//function mYTHEME_theme_suggestions_page_alter(array &$suggestions, array $variables, $hook) {
+//  $node = Drupal::request()->attributes->get('node');
+//  if ($node && $node->getType() == 'article') {
+//    $suggestions[] = 'page__NAME_OF_YOUR_TEMPLATE';
+//  }
+//}
+
+/**
+ * Implements hook_theme_suggestions_page_alter()
+ * @param array $suggestions
+ * @param array $variables
+ * @param $hook
+ */
+function bespin_theme_suggestions_page_alter(array &$suggestions, array $variables) {
+  // Add content type suggestions.
+  if ($node = \Drupal::request()->attributes->get('node')) {
+    array_splice($suggestions, 1, 0, 'page__node__' . $node->getType());
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter()
+ * @param array $suggestions
+ * @param array $variables
+ * @param $hook
+ */
+function bespin_theme_suggestions_image_formatter_alter(array &$suggestions, array $variables) {
+  $entity = $variables['item']->getEntity();
+  $field_name = $variables['item']->getParent()->getName();
+  $suggestions[] = 'image_formatter__' . $entity->getEntityTypeId() . '__' . $entity->bundle() . '__' . $field_name;
+}
+
+
+/**
+ * Implements theme_preprocess_image() to add background image handling.
+ * @param $variables
+ */
+function bespin_preprocess_image(&$variables) {
+  if ($variables['style_name'] == 'bg_image_style') {
+    $tmp = $variables['uri'];
+    $variables['attributes']['bg_url'] = 'url(' . file_create_url($tmp) . ')';
+  } else if ($variables['style_name'] == 'parallax_image') {
+      $tmp = $variables['uri'];
+      $variables['attributes']['px_url'] = 'url(' . file_create_url($tmp) . ')';
+    }
+}
+
+/**
+ * Implements theme_preprocess_page() to add libraries to specific pages
+ * @param $variables
+ */
+function bespin_preprocess_page(&$variables) {
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if ($node) {
+    if ($node->id() == 5) {
+      $variables['#attached']['library'][] = 'bespin/custom_sticky';
+    }
+  }
+}
+
+/**
+ * Implements theme_preprocess_HOOK() for the mixitup_views_view_mixitup template.
+ *
+ * For the people_masonry view:
+ * - Adds the sterling/people library.
+ * - Alters the default mixitup drupalSettings to add .tid_2 (Senior Management)
+ *   as the initial filter, or a query value from the URL if one is provided.
+ *     ex: /people?group=43
+ * - Provides the correct taxonomy term weight to drupalSettings.
+ * - Updates caching rules for this view.
+ */
+function bespin_preprocess_mixitup_views_view_mixitup(&$variables) {
+  if ($variables['view']->id() == 'activcore_team') {
+    // Adds the bespin/team library to the activcore_team view.
+    $variables['#attached']['library'][] = 'bespin/team';
+
+    // Provides the taxonomy term ordering to drupalSettings.
+    $states = \Drupal::service('entity_type.manager')
+      ->getStorage("taxonomy_term")
+      ->loadTree('state', $parent = 0, $max_depth = NULL, $load_entities = FALSE);
+    // Terms come listed by weight, yay!
+    $tids = [];
+    foreach ($states as $term) {
+      $tids[] = $term->tid;
+    }
+    $variables['#attached']['drupalSettings']['bespinMixitup']['tidsOrder'] = $tids;
+
+    // Checks for initial filter default from query value
+    $params = \Drupal::request()->query->all();
+    if (isset($params['group']) && in_array($params['group'], $tids)) {
+      // Ensures that the group value provided is an included term.
+      $tid = $params['group'];
+    }
+    else {
+      // set $tid to tid id for a default filter selection on page load.
+      $tid = '';
+    }
+
+    // Enable to choose a default filter
+//    $variables['#attached']['drupalSettings']['mixitup']['.view-activcore-team.view-display-id-block_activcore_team .view-content']['load']['filter'] = '
+    //.tid_' .
+    // $tid;
+
+    $variables['#attached']['drupalSettings']['bespinMixitup']['tidDefault'] = $tid;
+
+    // Add additional caching by the "group" query
+    $variables['#cache']['contexts'][] = 'url.query_args:group';
+
+  }
+}
